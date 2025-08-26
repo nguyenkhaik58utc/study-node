@@ -1,17 +1,19 @@
-import { Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, ValidationPipe } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, UseGuards, ValidationPipe } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { Product } from './entities/product.model';
+import { TimeGuard } from 'src/common/guards/product.guards';
 
 @ApiTags('products')
 @Controller('products')
 export class ProductController {
   constructor(private readonly service: ProductService) {}
-
+  @ApiBearerAuth('access-token')
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm' })
   @ApiResponse({ status: 200, description: 'Danh sách sản phẩm trả về thành công.' })
+  @UseGuards(TimeGuard)
   async findAll() {
     return this.service.getAllProduct();
   }

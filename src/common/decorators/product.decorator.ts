@@ -19,35 +19,35 @@ export function Readonly(target: object, propertyKey: string): void {
 /**
  * Accessor decorator - log khi getter được gọi
  */
-// export function LogAccess(
-//     target: object,
-//     propertyKey: string,
-//     descriptor: PropertyDescriptor
-// ): void {
-//     const originalGet = descriptor.get;
-//     descriptor.get = function (this: unknown) {
-//         console.log(`Truy cập vào getter: ${propertyKey}`);
-//         return originalGet?.apply(this);
-//     };
-// }
+export function LogAccess(
+    target: object,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+): void {
+    const originalGet = descriptor.get;
+    descriptor.get = function (this: unknown) {
+        console.log(`Truy cập vào getter: ${propertyKey}`);
+        return originalGet?.apply(this);
+    };
+}
 
 /**
  * Method decorator - delay trước khi thực thi
  */
-// export function DelayGetInfo(ms: number) {
-//     return function (
-//         target: object,
-//         propertyKey: string,
-//         descriptor: PropertyDescriptor
-//     ): void {
-//         const originalMethod = descriptor.value as (...args: any[]) => unknown;
-//         descriptor.value = async function (this: unknown, ...args: any[]) {
-//             console.log(`Đợi ${ms}ms trước khi chạy ${propertyKey}`);
-//             await new Promise((res) => setTimeout(res, ms));
-//             return originalMethod.apply(this, args);
-//         };
-//     };
-// }
+export function DelayGetInfo(ms: number) {
+    return function (
+        target: object,
+        propertyKey: string,
+        descriptor: PropertyDescriptor
+    ): void {
+        const originalMethod = descriptor.value as (...args: any[]) => unknown;
+        descriptor.value = async function (this: unknown, ...args: any[]) {
+            console.log(`Đợi ${ms}ms trước khi chạy ${propertyKey}`);
+            await new Promise((res) => setTimeout(res, ms));
+            return originalMethod.apply(this, args);
+        };
+    };
+}
 
 /**
  * Parameter decorator - log thông tin parameter

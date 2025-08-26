@@ -19,3 +19,17 @@ export class AuthMiddleware implements NestMiddleware {
   next();
 }
 }
+@Injectable()
+export class TimeLoggerMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    const start = Date.now();
+
+    // sau khi response gửi xong thì tính thời gian
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      console.log(`[${req.method}] ${req.originalUrl} - ${duration}ms`);
+    });
+
+    next();
+  }
+}
