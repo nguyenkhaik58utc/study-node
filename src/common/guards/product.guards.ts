@@ -9,7 +9,7 @@ export class TimeGuard implements CanActivate {
     const now = new Date();
     const hour = now.getHours();
 
-    if (hour >= 8 && hour < 18) {
+    if (hour >= 8 && hour < 12) {
       return true;
     }
 
