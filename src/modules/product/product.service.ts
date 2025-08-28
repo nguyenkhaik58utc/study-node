@@ -1,17 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Product } from './entities/product.model';
 import { delay } from 'src/common/utils/product.util';
+import type { TokenConfig } from '../token/token-config.interface';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ProductService {
   private products: Product[] = [];
-
+  constructor(@Inject('TOKEN_CONFIG') private config: TokenConfig, private configService: ConfigService) {}
   async addProduct(product: Product): Promise<void> {
     await delay(1000);
     this.products.push(product);
   }
 
   async getAllProduct(): Promise<Product[]> {
+    console.log(`key=${this.config.apiKey}, secret=${this.config.secret}`);
+    const apiKey = this.configService.get<string>('API_KEY');
+    const secret = this.configService.get<string>('SECRET');
+    console.log(`Pay with key=${apiKey}, secret=${secret}`);
     return Promise.resolve(this.products);
   }
 
