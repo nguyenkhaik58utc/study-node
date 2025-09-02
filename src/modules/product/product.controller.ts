@@ -1,4 +1,4 @@
-import { Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, UseFilters, UseGuards, UseInterceptors, ValidationPipe } from '@nestjs/common';
+import { Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, Res, UploadedFile, UseFilters, UseGuards, UseInterceptors, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -6,6 +6,11 @@ import { Product } from './entities/product.model';
 import { TimeGuard } from 'src/common/guards/product.guards';
 import { LoggingInterceptor } from 'src/common/interceptors/product.interceptors';
 import { HttpExceptionFilter } from 'src/common/filters/http-exception.filter';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { Express } from 'express';
+
 
 @ApiTags('products')
 @Controller('products')
@@ -76,4 +81,43 @@ export class ProductController {
     if (!ok) throw new NotFoundException('Product not found');
     return { deleted: true };
   }
+
+@Post(':id/upload')
+@ApiOperation({ summary: 'Upload ảnh cho sản phẩm' })
+@ApiParam({ name: 'id', type: Number })
+@UseInterceptors(FileInterceptor('file', {
+  storage: diskStorage({
+    destination: './uploads/products',
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + extname(file.originalname));
+    }
+  })
+}))
+async uploadFile(
+  @Param('id', ParseIntPipe) id: number,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  const product = await this.service.getProductById(id);
+  if (!product) throw new NotFoundException('Product not found');
+
+  product.imageUrlValue = `/uploads/products/${file.filename}`;
+  await this.service.updateProduct(product);
+
+  return {
+    message: 'Upload thành công',
+    file: file.filename,
+    url: product.imageUrlValue,
+  };
+}
+@Get(':id/image')
+@ApiOperation({ summary: 'Tải ảnh sản phẩm' })
+@ApiParam({ name: 'id', type: Number })
+async downloadImage(@Param('id', ParseIntPipe) id: number, @Res() res) {
+  const product = await this.service.getProductById(id);
+  if (!product || !product.imageUrlValue) throw new NotFoundException('Image not found');
+
+  return res.sendFile(product.imageUrlValue, { root: '.' });
+}
+
 }

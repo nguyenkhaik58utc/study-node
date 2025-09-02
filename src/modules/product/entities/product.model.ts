@@ -20,6 +20,7 @@ export class Product extends Base implements IProduct {
   public quanlity: number = 0;
   private price1: number;
   #price2: number;
+  private imageUrl: string;
 
   constructor(id: number, name: string, price1: number, price2: number) {
     super(id, name);
@@ -39,6 +40,13 @@ export class Product extends Base implements IProduct {
   }
   set price2Value(value: number) {
     this.#price2 = value;
+  }
+
+  get imageUrlValue(): string {
+    return this.imageUrl;
+  }
+  set imageUrlValue(value: string) {
+    this.imageUrl = value;
   }
 
   getInfo(): string {
