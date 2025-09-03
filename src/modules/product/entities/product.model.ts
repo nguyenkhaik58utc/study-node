@@ -1,4 +1,4 @@
-import { PositiveNumber } from "src/common/decorators/product.decorator";
+import { PositiveNumber } from "../../../common/decorators/product.decorator";
 
 export type ID = number;
 
