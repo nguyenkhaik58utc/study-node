@@ -7,15 +7,14 @@ import { TimeGuard } from '../../common/guards/product.guards';
 import { LoggingInterceptor } from '../../common/interceptors/product.interceptors';
 import { HttpExceptionFilter } from '../../common/filters/http-exception.filter';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { Express } from 'express';
+import { S3Service } from './../../s3/s3.service';
 
 
 @ApiTags('products')
 @Controller('products')
 export class ProductController {
-  constructor(private readonly service: ProductService) {}
+  constructor(private readonly service: ProductService, private readonly s3Service: S3Service) {}
   @ApiBearerAuth('access-token')
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm' })
@@ -85,15 +84,7 @@ export class ProductController {
 @Post(':id/upload')
 @ApiOperation({ summary: 'Upload ảnh cho sản phẩm' })
 @ApiParam({ name: 'id', type: Number })
-@UseInterceptors(FileInterceptor('file', {
-  storage: diskStorage({
-    destination: './uploads/products',
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + extname(file.originalname));
-    }
-  })
-}))
+@UseInterceptors(FileInterceptor('file'))
 async uploadFile(
   @Param('id', ParseIntPipe) id: number,
   @UploadedFile() file: Express.Multer.File,
@@ -103,7 +94,7 @@ async uploadFile(
 
   product.imageUrlValue = `/uploads/products/${file.filename}`;
   await this.service.updateProduct(product);
-
+  await this.s3Service.uploadFile(file, process.env.AWS_S3_BUCKET!);
   return {
     message: 'Upload thành công',
     file: file.filename,
