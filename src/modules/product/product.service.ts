@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Product } from './entities/product.model';
-import { delay } from 'src/common/utils/product.util';
+import { delay } from '../../common/utils/product.util';
 import type { TokenConfig } from '../token/token-config.interface';
 import { ConfigService } from '@nestjs/config';
 
