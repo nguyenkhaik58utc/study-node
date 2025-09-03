@@ -1,7 +1,7 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ProductController } from './product.controller';
 import { ProductService } from './product.service';
-import { AuthMiddleware, LoggerMiddleware, TimeLoggerMiddleware } from 'src/common/middleware/product.middleware';
+import { AuthMiddleware, LoggerMiddleware, TimeLoggerMiddleware } from '../../common/middleware/product.middleware';
 import { ProdTokenConfigService, SandboxTokenConfigService } from '../token/token-config.interface';
 import { ConfigModule } from '@nestjs/config';
 

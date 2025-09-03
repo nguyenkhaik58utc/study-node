@@ -3,9 +3,9 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } 
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { Product } from './entities/product.model';
-import { TimeGuard } from 'src/common/guards/product.guards';
-import { LoggingInterceptor } from 'src/common/interceptors/product.interceptors';
-import { HttpExceptionFilter } from 'src/common/filters/http-exception.filter';
+import { TimeGuard } from '../../common/guards/product.guards';
+import { LoggingInterceptor } from '../../common/interceptors/product.interceptors';
+import { HttpExceptionFilter } from '../../common/filters/http-exception.filter';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
