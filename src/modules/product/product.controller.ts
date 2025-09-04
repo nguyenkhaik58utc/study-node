@@ -1,5 +1,29 @@
-import { Body, ConflictException, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, Res, UploadedFile, UseFilters, UseGuards, UseInterceptors, ValidationPipe } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  ConflictException,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Res,
+  UploadedFile,
+  UseFilters,
+  UseGuards,
+  UseInterceptors,
+  ValidationPipe,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { Product } from './entities/product.model';
@@ -9,16 +33,26 @@ import { HttpExceptionFilter } from '../../common/filters/http-exception.filter'
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
 import { S3Service } from './../../s3/s3.service';
-
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { Response } from 'express';
+import { join } from 'path';
+import { createWriteStream } from 'fs';
 
 @ApiTags('products')
 @Controller('products')
 export class ProductController {
-  constructor(private readonly service: ProductService, private readonly s3Service: S3Service) {}
+  private s3 = new S3Client({ region: process.env.AWS_REGION });
+  constructor(
+    private readonly service: ProductService,
+    private readonly s3Service: S3Service,
+  ) {}
   @ApiBearerAuth('access-token')
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm' })
-  @ApiResponse({ status: 200, description: 'Danh sách sản phẩm trả về thành công.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Danh sách sản phẩm trả về thành công.',
+  })
   @UseGuards(TimeGuard)
   @UseInterceptors(LoggingInterceptor)
   @UseFilters(HttpExceptionFilter)
@@ -57,7 +91,10 @@ export class ProductController {
   @ApiBody({ type: UpdateProductDto })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công.' })
   @ApiResponse({ status: 404, description: 'Không tìm thấy.' })
-  async update(@Param('id', ParseIntPipe) id: number, @Body(new ValidationPipe()) dto: UpdateProductDto) {
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ValidationPipe()) dto: UpdateProductDto,
+  ) {
     const existing = await this.service.getProductById(id);
     if (!existing) throw new NotFoundException('Product not found');
 
@@ -81,34 +118,74 @@ export class ProductController {
     return { deleted: true };
   }
 
-@Post(':id/upload')
-@ApiOperation({ summary: 'Upload ảnh cho sản phẩm' })
-@ApiParam({ name: 'id', type: Number })
-@UseInterceptors(FileInterceptor('file'))
-async uploadFile(
-  @Param('id', ParseIntPipe) id: number,
-  @UploadedFile() file: Express.Multer.File,
-) {
-  const product = await this.service.getProductById(id);
-  if (!product) throw new NotFoundException('Product not found');
+  @Post(':id/upload')
+  @ApiOperation({ summary: 'Upload ảnh cho sản phẩm' })
+  @ApiParam({ name: 'id', type: Number })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const product = await this.service.getProductById(id);
+    if (!product) throw new NotFoundException('Product not found');
 
-  product.imageUrlValue = `/uploads/products/${file.filename}`;
-  await this.service.updateProduct(product);
-  await this.s3Service.uploadFile(file, process.env.AWS_S3_BUCKET!);
-  return {
-    message: 'Upload thành công',
-    file: file.filename,
-    url: product.imageUrlValue,
-  };
-}
-@Get(':id/image')
-@ApiOperation({ summary: 'Tải ảnh sản phẩm' })
-@ApiParam({ name: 'id', type: Number })
-async downloadImage(@Param('id', ParseIntPipe) id: number, @Res() res) {
-  const product = await this.service.getProductById(id);
-  if (!product || !product.imageUrlValue) throw new NotFoundException('Image not found');
+    await this.service.updateProduct(product);
+    const result = await this.s3Service.uploadFile(
+      file,
+      process.env.AWS_S3_BUCKET!,
+    );
+    product.imageUrlValue = result.url;
 
-  return res.sendFile(product.imageUrlValue, { root: '.' });
-}
+    return {
+      message: 'Upload thành công',
+      file: file.filename,
+      url: product.imageUrlValue,
+    };
+  }
 
+  @Get(':id/image')
+  @ApiOperation({ summary: 'Tải ảnh sản phẩm (private từ S3)' })
+  @ApiParam({ name: 'id', type: Number })
+  async downloadImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const product = await this.service.getProductById(id);
+    if (!product?.imageUrlValue) {
+      throw new NotFoundException('Image not found');
+    }
+    const filename: string = product.imageUrlValue.split('/').pop()!;
+
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: product.imageUrlValue,
+    });
+
+    try {
+      const s3Response = await this.s3.send(command);
+      const stream = s3Response.Body as any;
+
+      res.setHeader(
+        'Content-Type',
+        s3Response.ContentType || 'application/octet-stream',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${product.imageUrlValue.split('/').pop()}"`,
+      );
+
+      stream.pipe(res);
+      const localPath = join(process.cwd(), 'uploads', 'products', filename);
+
+      const fileWriter = createWriteStream(localPath);
+
+      await new Promise((resolve, reject) => {
+        stream.pipe(fileWriter).on('finish', resolve).on('error', reject);
+      });
+
+      return res.sendFile(localPath);
+    } catch (err) {
+      throw new NotFoundException('File not found in S3:' + err.message);
+    }
+  }
 }

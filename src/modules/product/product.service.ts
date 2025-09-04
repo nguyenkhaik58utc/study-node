@@ -17,7 +17,7 @@ export class ProductService {
     console.log(`key=${this.config.apiKey}, secret=${this.config.secret}`);
     const apiKey = this.configService.get<string>('API_KEY');
     const secret = this.configService.get<string>('SECRET');
-    console.log(`Pay with key=${apiKey}, secret=${secret}`);
+    console.log(`with key=${apiKey}, secret=${secret}`);
     return Promise.resolve(this.products);
   }
 

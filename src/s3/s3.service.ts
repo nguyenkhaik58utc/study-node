@@ -26,7 +26,7 @@ export class S3Service {
 
     return {
       key,
-      url: `https://${bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`,
+      url: `${key}`,
     };
   }
 }
