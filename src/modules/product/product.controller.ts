@@ -57,7 +57,7 @@ export class ProductController {
   @UseInterceptors(LoggingInterceptor)
   @UseFilters(HttpExceptionFilter)
   async findAll() {
-    return this.service.getAllProduct();
+    return this.service.loadProductsFromFile();
   }
 
   @Get(':id')
@@ -76,11 +76,12 @@ export class ProductController {
   @ApiBody({ type: CreateProductDto })
   @ApiResponse({ status: 201, description: 'Tạo thành công.' })
   async create(@Body(new ValidationPipe()) dto: CreateProductDto) {
+    console.log('CreateProductDto', dto);
     const existing = await this.service.getProductById(dto.id);
     if (existing) {
       throw new ConflictException(`Product with id ${dto.id} already exists`);
     }
-    const p = new Product(dto.id, dto.name, dto.price1, dto.price2);
+    const p = new Product(dto.id, dto.name, (dto.price2 * 1.1).toFixed() as unknown as number, dto.price2, dto.quanlity, "");
     await this.service.addProduct(p);
     return { message: 'created', id: dto.id };
   }
@@ -99,11 +100,15 @@ export class ProductController {
     if (!existing) throw new NotFoundException('Product not found');
 
     const name = dto.name ?? existing.Name;
-    const price1 = dto.price1 ?? existing.price1Value;
     const price2 = dto.price2 ?? existing.price2Value;
+    const price1 = (price2 * 1.1).toFixed() as unknown as number;
+    const quanlity = dto.quanlity ?? existing.quanlity;
+    const imageurl = dto.imageUrl ?? existing.imageUrlValue;
 
-    const updated = new Product(id, name, price1, price2);
+    const updated = new Product(id, name, price1, price2, quanlity, imageurl);
     const ok = await this.service.updateProduct(updated);
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.service.saveProductsToFile(await this.service.getAllProduct());
     return { updated: ok };
   }
 
@@ -129,12 +134,12 @@ export class ProductController {
     const product = await this.service.getProductById(id);
     if (!product) throw new NotFoundException('Product not found');
 
-    await this.service.updateProduct(product);
     const result = await this.s3Service.uploadFile(
       file,
       process.env.AWS_S3_BUCKET!,
     );
     product.imageUrlValue = result.url;
+    await this.service.updateProduct(product);
 
     return {
       message: 'Upload thành công',

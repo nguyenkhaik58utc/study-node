@@ -22,10 +22,12 @@ export class Product extends Base implements IProduct {
   #price2: number;
   private imageUrl: string;
 
-  constructor(id: number, name: string, price1: number, price2: number) {
+  constructor(id: number, name: string, price1: number, price2: number, quanlity: number, imageUrl: string) {
     super(id, name);
     this.price1 = price1;
     this.#price2 = price2;
+    this.quanlity = quanlity;
+    this.imageUrl = imageUrl;
   }
 
   get price1Value(): number {

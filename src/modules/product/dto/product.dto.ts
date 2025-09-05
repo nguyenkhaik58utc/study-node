@@ -31,4 +31,6 @@ export class CreateProductDto {
   price2!: number;
 }
 
-export class UpdateProductDto extends PartialType(CreateProductDto) {}
+export class UpdateProductDto extends PartialType(CreateProductDto) {
+  imageUrl: string;
+}
