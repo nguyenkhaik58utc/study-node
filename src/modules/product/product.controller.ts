@@ -31,12 +31,13 @@ import { TimeGuard } from '../../common/guards/product.guards';
 import { LoggingInterceptor } from '../../common/interceptors/product.interceptors';
 import { HttpExceptionFilter } from '../../common/filters/http-exception.filter';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Express } from 'express';
+import type { Express } from 'express';
 import { S3Service } from './../../s3/s3.service';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { join } from 'path';
 import { createWriteStream } from 'fs';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('products')
 @Controller('products')
@@ -46,6 +47,8 @@ export class ProductController {
     private readonly service: ProductService,
     private readonly s3Service: S3Service,
   ) {}
+
+  @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('access-token')
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm' })
