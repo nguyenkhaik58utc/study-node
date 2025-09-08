@@ -43,7 +43,6 @@ export class ProductService {
     const lines = content.split(/\r?\n/).filter((line) => line.trim() !== '');
 
     this.products = lines.map((line) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [id, Name, quanlity, price1, price2, imageUrl] = line.split('/');
       const product = new Product(
         Number(id),
