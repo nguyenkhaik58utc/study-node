@@ -9,7 +9,8 @@ export class UserEntity {
     public id: number,
     public name: string,
     public email: string,
-    private password: string 
+    private password: string,
+    private refreshToken: string 
   ) {}
 
   setPassword(password: string) {

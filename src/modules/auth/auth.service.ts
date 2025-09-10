@@ -1,46 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class AuthService {
-    constructor(private jwtService: JwtService) { }
-
-    private users = [
-        {
-            userId: 1,
-            username: 'test',
-            password: 'xxx',
-            refreshToken: '',
-        },
-    ];
+    constructor(private jwtService: JwtService, private userService: UserService) { }
 
     async saveRefreshToken(userId: number, token: string) {
-        const user = this.users.find(u => u.userId === userId);
-        if (user) {
-            user.refreshToken = token;
-        }
-    }
-
-    async getUserIfRefreshTokenMatches(userId: number, token: string) {
-        const user = this.users.find(u => u.userId === userId);
-        if (!user || user.refreshToken !== token) return null;
-        return user;
+        await this.userService.updateUser(userId, { refreshToken: token });
     }
 
     async login(user: any) {
-        const payload = { username: user.username, sub: user.userId };
-
-        const accessToken = this.jwtService.sign(payload, {
+        const accessToken = this.jwtService.sign(user, {
             secret: process.env.JWT_KEY ?? "xxx",
             expiresIn: '15m',
         });
 
-        const refreshToken = this.jwtService.sign(payload, {
+        const refreshToken = this.jwtService.sign(user, {
             secret: process.env.JWT_KEY ?? "xxx",
             expiresIn: '7d',
         });
 
-        await this.saveRefreshToken(user.userId, refreshToken);
+        await this.saveRefreshToken(user.id, refreshToken);
 
         return {
             access_token: accessToken,
@@ -50,8 +31,8 @@ export class AuthService {
 
 
     generateAccessToken(payload: any) {
-        return this.jwtService.sign(payload, {
-            secret: 'access-secret',
+        return this.jwtService.sign({ ...payload }, {
+            secret: process.env.JWT_KEY ,
             expiresIn: '15m',
         });
 
@@ -59,14 +40,11 @@ export class AuthService {
 
     verifyRefreshToken(token: string) {
         return this.jwtService.verify(token, {
-            secret: 'refresh-secret',
+            secret: process.env.JWT_KEY ,
         });
     }
 
     async logout(userId: number) {
-        const user = this.users.find(u => u.userId === userId);
-        if (user) {
-            user.refreshToken = '';
-        }
+        await this.userService.updateUser(userId, { refreshToken: "" });
     }
 }

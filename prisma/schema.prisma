@@ -12,6 +12,7 @@ model User {
   name  String @db.NVarChar(50)
   email String @unique @db.VarChar(100)
   password String @db.NVarChar(1024)
+  refreshToken   String?
   profile Profile? @relation("UserProfile")
   roles  UserRole[]
   createdProducts Product[] @relation("CreatedBy")
@@ -41,6 +42,7 @@ model Product {
   quanlity  Int
   price1    Float
   price2    Float
+  imageUrl  String @db.NVarChar(1024)
 
   createdBy   Int
   updatedBy   Int?

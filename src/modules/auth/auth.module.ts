@@ -4,9 +4,11 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { AuthController } from './auth.controller';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
+    UserModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_KEY ?? "xxx",
@@ -25,17 +27,4 @@ export class AuthModule {
       refreshToken: '',
     },
   ];
-
-  async saveRefreshToken(userId: number, token: string) {
-    const user = this.users.find(u => u.userId === userId);
-    if (user) {
-      user.refreshToken = token;
-    }
-  }
-
-  async getUserIfRefreshTokenMatches(userId: number, token: string) {
-    const user = this.users.find(u => u.userId === userId);
-    if (!user || user.refreshToken !== token) return null;
-    return user;
-  }
 }

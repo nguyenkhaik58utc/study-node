@@ -26,7 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
-import { Product } from './entities/product.model';
+import { Product } from '@prisma/client';
 import { TimeGuard } from '../../common/guards/product.guards';
 import { LoggingInterceptor } from '../../common/interceptors/product.interceptors';
 import { HttpExceptionFilter } from '../../common/filters/http-exception.filter';
@@ -60,7 +60,7 @@ export class ProductController {
   @UseInterceptors(LoggingInterceptor)
   @UseFilters(HttpExceptionFilter)
   async findAll() {
-    return this.service.loadProductsFromFile();
+    return this.service.getAllProduct();
   }
 
   @Get(':id')
@@ -84,8 +84,17 @@ export class ProductController {
     if (existing) {
       throw new ConflictException(`Product with id ${dto.id} already exists`);
     }
-    const p = new Product(dto.id, dto.name, (dto.price2 * 1.1).toFixed() as unknown as number, dto.price2, dto.quanlity, "");
-    await this.service.addProduct(p);
+    const product: Product = {
+      id: dto.id,
+      name: dto.name,
+      price1: (dto.price2 * 1.1).toFixed() as unknown as number,
+      price2: dto.price2,
+      quanlity: dto.quanlity,
+      imageUrl: '',
+      createdBy: 2,
+      updatedBy: null
+    };
+    await this.service.addProduct(product);
     return { message: 'created', id: dto.id };
   }
 
@@ -101,17 +110,16 @@ export class ProductController {
   ) {
     const existing = await this.service.getProductById(id);
     if (!existing) throw new NotFoundException('Product not found');
+    const product: Product = {
+      ...existing,
+      name: dto.name ?? existing.name,
+      price2: dto.price2 ?? existing.price2,
+      price1: Math.round((dto.price2 ?? existing.price2) * 1.1),
+      quanlity: dto.quanlity ?? existing.quanlity,
+      imageUrl: dto.imageUrl ?? existing.imageUrl,
+    };
 
-    const name = dto.name ?? existing.Name;
-    const price2 = dto.price2 ?? existing.price2Value;
-    const price1 = (price2 * 1.1).toFixed() as unknown as number;
-    const quanlity = dto.quanlity ?? existing.quanlity;
-    const imageurl = dto.imageUrl ?? existing.imageUrlValue;
-
-    const updated = new Product(id, name, price1, price2, quanlity, imageurl);
-    const ok = await this.service.updateProduct(updated);
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.service.saveProductsToFile(await this.service.getAllProduct());
+    const ok = await this.service.updateProduct(existing.id, product);
     return { updated: ok };
   }
 
@@ -141,13 +149,13 @@ export class ProductController {
       file,
       process.env.AWS_S3_BUCKET!,
     );
-    product.imageUrlValue = result.url;
-    await this.service.updateProduct(product);
+    product.imageUrl = result.url;
+    await this.service.updateProduct(product.id, product);
 
     return {
       message: 'Upload thành công',
       file: file.filename,
-      url: product.imageUrlValue,
+      url: product.imageUrl,
     };
   }
 
@@ -159,14 +167,15 @@ export class ProductController {
     @Res() res: Response,
   ) {
     const product = await this.service.getProductById(id);
-    if (!product?.imageUrlValue) {
+    if (!product?.imageUrl) {
       throw new NotFoundException('Image not found');
     }
-    const filename: string = product.imageUrlValue.split('/').pop()!;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const filename: string = product.imageUrl.split('/').pop()!;
 
     const command = new GetObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET,
-      Key: product.imageUrlValue,
+      Key: product.imageUrl,
     });
 
     try {
@@ -179,7 +188,7 @@ export class ProductController {
       );
       res.setHeader(
         'Content-Disposition',
-        `inline; filename="${product.imageUrlValue.split('/').pop()}"`,
+        `inline; filename="${product.imageUrl.split('/').pop()}"`,
       );
 
       stream.pipe(res);

@@ -1,11 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Product } from './entities/product.model';
+import { Product } from '@prisma/client';
 import { delay } from '../../common/utils/product.util';
 import type { TokenConfig } from '../token/token-config.interface';
 import { ConfigService } from '@nestjs/config';
-import { join } from 'path';
-import { promises as fs } from 'fs';
-import { plainToInstance } from 'class-transformer';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ProductService {
@@ -14,103 +12,54 @@ export class ProductService {
   constructor(
     @Inject('TOKEN_CONFIG') private config: TokenConfig,
     private configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.loadProductsFromFile().then((products) => {
-      this.products = products;
-    });
-  }
-  private getFilePath() {
-    return join(process.cwd(), 'uploads', 'products', 'product.txt');
   }
 
-  async loadProductsFromFile(): Promise<Product[]> {
-    const filePath = this.getFilePath();
-
-    try {
-      await fs.access(filePath);
-    } catch {
-      await fs.mkdir(this.getFilePath().replace(/product\.txt$/, ''), {
-        recursive: true,
-      });
-      await fs.writeFile(filePath, '', 'utf-8');
-      this.products = [];
-      return this.products;
-    }
-
-    const content = await fs.readFile(this.getFilePath(), 'utf-8');
-
-    const lines = content.split(/\r?\n/).filter((line) => line.trim() !== '');
-
-    this.products = lines.map((line) => {
-      const [id, Name, quanlity, price1, price2, imageUrl] = line.split('/');
-      const product = new Product(
-        Number(id),
-        Name,
-        Number(price1).toFixed() as unknown as number,
-        Number(price2).toFixed() as unknown as number,
-        Number(quanlity),
-        String(imageUrl)
-      );
-      return product;
-    });
-    return this.products.map(p => plainToInstance(Product, p));
-  }
-
-  async saveProductsToFile(products: Product[]): Promise<void> {
-    const filePath = this.getFilePath();
-    console.log('products', this.products);
-
-    const content = products
-      .map(
-        (p) =>
-          `${p.Id}/${p.Name}/${p.quanlity}/${p.price1Value}/${p.price2Value}/${p.imageUrlValue ?? ''}`,
-      )
-      .join('\n');
-
-    await fs.writeFile(filePath, content, 'utf-8');
-    this.products = products;
-  }
-
-  async addProduct(product: Product): Promise<void> {
+  async addProduct(product: Product) {
     await delay(1000);
     this.products.push(product);
-    await this.saveProductsToFile(this.products);
+    await this.prisma.product.create({
+      data: {
+        name: product.name,
+        quanlity: product.quanlity,
+        price1: product.price1,
+        price2: product.price2,
+        imageUrl: product.imageUrl ?? '',
+        createdBy: 2,
+      },
+    });
   }
 
-  async getAllProduct(): Promise<Product[]> {
+  async getAllProduct() {
     console.log(`key=${this.config.apiKey}, secret=${this.config.secret}`);
     const apiKey = this.configService.get<string>('API_KEY');
     const secret = this.configService.get<string>('SECRET');
     console.log(`with key=${apiKey}, secret=${secret}`);
-    return Promise.resolve(this.products);
+    this.products = await this.prisma.product.findMany();
   }
 
-  async getProductById(id: number): Promise<Product | undefined> {
-    return Promise.resolve(this.products.find((x) => x.Id === id));
+  async getProductById(id: number) {
+    return this.prisma.product.findUnique({
+      where: { id }
+    });
   }
 
-  async removeProduct(id: number): Promise<boolean> {
-    const index = this.products.findIndex((x) => x.Id === id);
-    if (index !== -1) {
-      this.products.splice(index, 1);
-      return Promise.resolve(true);
-    }
-    return Promise.resolve(false);
+  async removeProduct(id: number) {
+    return await this.prisma.product.delete({ where: { id } });
   }
 
-  async updateProduct(productDTO: Product): Promise<boolean> {
-    await delay(1000);
-    const product = this.products.find((x) => x.Id === productDTO.Id);
-    if (product) {
-      product.Name = productDTO.Name;
-      product.price1Value = productDTO.price1Value;
-      product.price2Value = productDTO.price2Value;
-      product.quanlity = 0;
-      product.imageUrlValue = productDTO.imageUrlValue;
-      await this.saveProductsToFile(this.products);
-      return Promise.resolve(true);
-    }
-    return Promise.resolve(false);
+  async updateProduct(id: number, productDTO: Product) {
+    await this.prisma.product.update({
+      where: { id },
+      data: {
+        name: productDTO.name,
+        quanlity: productDTO.quanlity,
+        price1: productDTO.price1,
+        price2: productDTO.price2,
+        imageUrl: productDTO.imageUrl ?? '',
+        createdBy: 2,
+      },
+    });
   }
 }

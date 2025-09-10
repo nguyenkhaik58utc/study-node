@@ -1,5 +1,5 @@
 import { ApiProperty, PartialType, PickType } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -22,5 +22,9 @@ export class CreateUserDto {
   password: string;
 }
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export class UpdateUserDto extends PartialType(CreateUserDto, ) {
+  @IsOptional()
+  @IsString()
+  refreshToken?: string;
+}
 export class LoginUserDto extends PickType(CreateUserDto, ['email', 'password'] as const) {}

@@ -17,7 +17,7 @@ export class UserService {
 
   async seedData() {
     const newPassword = 'passw0rd@123';
-    const dataSeed = new UserEntity(0, 'Admin', 'admin@example.com', '');
+    const dataSeed = new UserEntity(0, 'Admin', 'admin@example.com', '', '');
     dataSeed.setPassword(newPassword);
     await this.prisma.$transaction(async (tx) => {
       await tx.user.upsert({
@@ -38,6 +38,7 @@ export class UserService {
       createUserDto.name,
       createUserDto.email,
       '',
+      ''
     );
     userEntity.setPassword(createUserDto.password);
 
@@ -59,6 +60,7 @@ export class UserService {
         updateUserDto.name ?? '',
         updateUserDto.email ?? '',
         '',
+        updateUserDto.refreshToken ?? ''
       );
       userEntity.setPassword(updateUserDto.password);
       data.password = userEntity['password'];
@@ -96,6 +98,7 @@ export class UserService {
       user.name,
       user.email,
       user.password,
+      user.refreshToken??""
     );
 
     const isValid = userEntity.checkPassword(password);
@@ -107,4 +110,9 @@ export class UserService {
       email: user.email,
     };
   }
+  async getUserIfRefreshTokenMatches(userId: number, refreshToken: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.refreshToken || user.refreshToken !== refreshToken) return null;
+    return user;
+  };
 }
