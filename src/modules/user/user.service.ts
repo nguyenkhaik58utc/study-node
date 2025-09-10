@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { UserEntity } from './entities/user.model';
@@ -7,12 +11,33 @@ import { UserEntity } from './entities/user.model';
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async OnModuleInit() {
+    await this.seedData();
+  }
+
+  async seedData() {
+    const newPassword = 'passw0rd@123';
+    const dataSeed = new UserEntity(0, 'Admin', 'admin@example.com', '');
+    dataSeed.setPassword(newPassword);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.upsert({
+        where: { email: 'admin@example.com' },
+        update: {},
+        create: {
+          email: dataSeed.email,
+          name: dataSeed.name,
+          password: dataSeed['password'],
+        },
+      });
+    });
+  }
+
   async createUser(createUserDto: CreateUserDto) {
     const userEntity = new UserEntity(
       0,
       createUserDto.name,
       createUserDto.email,
-      ''
+      '',
     );
     userEntity.setPassword(createUserDto.password);
 
@@ -29,7 +54,12 @@ export class UserService {
     const data: any = { ...updateUserDto };
 
     if (updateUserDto.password) {
-      const userEntity = new UserEntity(id, updateUserDto.name ?? '', updateUserDto.email ?? '', '');
+      const userEntity = new UserEntity(
+        id,
+        updateUserDto.name ?? '',
+        updateUserDto.email ?? '',
+        '',
+      );
       userEntity.setPassword(updateUserDto.password);
       data.password = userEntity['password'];
     }
@@ -61,7 +91,12 @@ export class UserService {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) throw new NotFoundException('User not found');
 
-    const userEntity = new UserEntity(user.id, user.name, user.email, user.password);
+    const userEntity = new UserEntity(
+      user.id,
+      user.name,
+      user.email,
+      user.password,
+    );
 
     const isValid = userEntity.checkPassword(password);
     if (!isValid) throw new UnauthorizedException('Invalid password');
