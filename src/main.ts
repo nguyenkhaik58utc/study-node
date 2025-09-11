@@ -13,7 +13,6 @@ async function bootstrap() {
     .setTitle('Product API')
     .setDescription('CRUD Product (in-memory) với Swagger')
     .setVersion('1.0.0')
-    .addTag('products')
     .addBearerAuth(
       {
         type: 'http',

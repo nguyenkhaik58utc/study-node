@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
@@ -10,15 +9,6 @@ export class LoggerMiddleware implements NestMiddleware {
   }
 }
 
-@Injectable()
-export class AuthMiddleware implements NestMiddleware {
-  use(req: Request & { headers: any }, res: Response, next: NextFunction) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const authHeader = req.headers['authorization'];
-  console.log(authHeader);
-  next();
-}
-}
 @Injectable()
 export class TimeLoggerMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {

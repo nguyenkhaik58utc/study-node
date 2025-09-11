@@ -1,6 +1,5 @@
 import {
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
@@ -9,6 +8,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Req,
   Res,
   UploadedFile,
   UseFilters,
@@ -21,8 +21,7 @@ import {
   ApiBody,
   ApiOperation,
   ApiParam,
-  ApiResponse,
-  ApiTags,
+  ApiResponse
 } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -38,9 +37,12 @@ import type { Response } from 'express';
 import { join } from 'path';
 import { createWriteStream } from 'fs';
 import { AuthGuard } from '@nestjs/passport';
-
-@ApiTags('products')
 @Controller('products')
+@UseGuards(AuthGuard('jwt'))
+@ApiBearerAuth('access-token')
+@UseGuards(TimeGuard)
+@UseInterceptors(LoggingInterceptor)
+@UseFilters(HttpExceptionFilter)
 export class ProductController {
   private s3 = new S3Client({ region: process.env.AWS_REGION });
   constructor(
@@ -48,19 +50,14 @@ export class ProductController {
     private readonly s3Service: S3Service,
   ) {}
 
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth('access-token')
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách sản phẩm' })
   @ApiResponse({
     status: 200,
     description: 'Danh sách sản phẩm trả về thành công.',
   })
-  @UseGuards(TimeGuard)
-  @UseInterceptors(LoggingInterceptor)
-  @UseFilters(HttpExceptionFilter)
   async findAll() {
-    return this.service.getAllProduct();
+    return await this.service.getAllProduct();
   }
 
   @Get(':id')
@@ -78,24 +75,21 @@ export class ProductController {
   @ApiOperation({ summary: 'Tạo mới sản phẩm' })
   @ApiBody({ type: CreateProductDto })
   @ApiResponse({ status: 201, description: 'Tạo thành công.' })
-  async create(@Body(new ValidationPipe()) dto: CreateProductDto) {
-    console.log('CreateProductDto', dto);
-    const existing = await this.service.getProductById(dto.id);
-    if (existing) {
-      throw new ConflictException(`Product with id ${dto.id} already exists`);
-    }
+  async create(@Body(new ValidationPipe()) dto: CreateProductDto, @Req() req: any) {
+    const user = req.user as { id: number; name: string; email: string };
+    console.log(user.id, user.name, user.email);
     const product: Product = {
-      id: dto.id,
+      id: 0,
       name: dto.name,
-      price1: (dto.price2 * 1.1).toFixed() as unknown as number,
+      price1: parseFloat((dto.price2 * 1.1).toFixed(2)),
       price2: dto.price2,
       quanlity: dto.quanlity,
       imageUrl: '',
-      createdBy: 2,
-      updatedBy: null
+      createdBy: user.id,
+      updatedBy: null,
     };
-    await this.service.addProduct(product);
-    return { message: 'created', id: dto.id };
+    const createdProduct = await this.service.addProduct(product);
+    return { message: 'created', createdProduct };
   }
 
   @Put(':id')
@@ -106,10 +100,13 @@ export class ProductController {
   @ApiResponse({ status: 404, description: 'Không tìm thấy.' })
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body(new ValidationPipe()) dto: UpdateProductDto,
+    @Body(new ValidationPipe()) dto: UpdateProductDto, @Req() req: any
   ) {
     const existing = await this.service.getProductById(id);
     if (!existing) throw new NotFoundException('Product not found');
+
+    const user = req['user'];
+    console.log('user=', user);
     const product: Product = {
       ...existing,
       name: dto.name ?? existing.name,
@@ -117,10 +114,11 @@ export class ProductController {
       price1: Math.round((dto.price2 ?? existing.price2) * 1.1),
       quanlity: dto.quanlity ?? existing.quanlity,
       imageUrl: dto.imageUrl ?? existing.imageUrl,
+      updatedBy: user.id ?? existing.updatedBy,
     };
 
-    const ok = await this.service.updateProduct(existing.id, product);
-    return { updated: ok };
+    const result = await this.service.updateProduct(existing.id, product);
+    return result;
   }
 
   @Delete(':id')

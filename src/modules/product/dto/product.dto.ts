@@ -1,12 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PartialType } from '@nestjs/mapped-types';
-import { IsInt, IsNotEmpty, IsNumber, IsPositive, Min, IsDefined } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsPositive, IsDefined } from 'class-validator';
 
 export class CreateProductDto {
-  @ApiProperty({ example: 1 })
-  @IsInt()
-  @Min(1)
-  id!: number;
 
   @ApiProperty({ example: 'Laptop Gaming' })
   @IsNotEmpty()

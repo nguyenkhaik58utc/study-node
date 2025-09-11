@@ -1,39 +1,42 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, ValidationPipe, UseGuards, UseInterceptors, UseFilters } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { LoginDto } from '../auth/dto/Login.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { TimeGuard } from 'src/common/guards/product.guards';
+import { LoggingInterceptor } from 'src/common/interceptors/product.interceptors';
+import { HttpExceptionFilter } from 'src/common/filters/http-exception.filter';
 @Controller('users')
+@UseGuards(AuthGuard('jwt'))
+@ApiBearerAuth('access-token')
+@UseGuards(TimeGuard)
+@UseInterceptors(LoggingInterceptor)
+@UseFilters(HttpExceptionFilter)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  create(@Body(new ValidationPipe()) createUserDto: CreateUserDto) {
-    return this.userService.createUser(createUserDto);
+  async create(@Body(new ValidationPipe()) createUserDto: CreateUserDto) {
+    return await this.userService.createUser(createUserDto);
   }
 
   @Get()
-  findAll() {
-    return this.userService.getUsers();
+  async findAll() {
+    return await this.userService.getUsers();
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.getUserById(id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return await this.userService.getUserById(id);
   }
 
   @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body(new ValidationPipe()) updateUserDto: UpdateUserDto) {
-    return this.userService.updateUser(id, updateUserDto);
+  async update(@Param('id', ParseIntPipe) id: number, @Body(new ValidationPipe()) updateUserDto: UpdateUserDto) {
+    return await this.userService.updateUser(id, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.deleteUser(id);
-  }
-
-  @Post('login')
-  async login(@Body(new ValidationPipe()) loginDto: LoginDto) {
-    const { email, password } = loginDto;
-    return this.userService.validateUser(email??"", password??"");
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    return await this.userService.deleteUser(id);
   }
 }
