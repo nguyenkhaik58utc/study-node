@@ -42,7 +42,7 @@ model Product {
   quanlity  Int
   price1    Float
   price2    Float
-  imageUrl  String @db.NVarChar(1024)
+  imageUrl  String
 
   createdBy   Int
   updatedBy   Int?
