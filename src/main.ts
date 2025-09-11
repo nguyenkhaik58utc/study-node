@@ -20,7 +20,7 @@ async function bootstrap() {
         bearerFormat: 'JWT',
         in: 'header',
       },
-      'access-token', 
+      'access-token',
     )
     .addApiKey(
       {
@@ -33,8 +33,14 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document); 
-  
+  SwaggerModule.setup('api', app, document, {
+    customCssUrl: 'https://unpkg.com/swagger-ui-dist/swagger-ui.css',
+    customJs: [
+      'https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js',
+      'https://unpkg.com/swagger-ui-dist/swagger-ui-standalone-preset.js',
+    ],
+  });
+
   // await app.init();
   // return app.getHttpAdapter().getInstance();
   await app.listen(3000);
