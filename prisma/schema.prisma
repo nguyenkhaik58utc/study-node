@@ -9,9 +9,9 @@ datasource db {
 
 model User {
   id    Int    @id @default(autoincrement())
-  name  String @db.NVarChar(50)
-  email String @unique @db.VarChar(100)
-  password String @db.NVarChar(1024)
+  name  String
+  email String @unique
+  password String
   refreshToken   String?
   profile Profile? @relation("UserProfile")
   roles  UserRole[]
