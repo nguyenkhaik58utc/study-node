@@ -1,8 +1,10 @@
 import { readFileSync } from 'fs';
 import { publicEncrypt, privateDecrypt } from 'crypto';
-
-const PUBLIC_KEY = readFileSync('public.pem', 'utf8');
-const PRIVATE_KEY = readFileSync('private.pem', 'utf8');
+import path from 'path';
+const publicKeyPath = path.join(__dirname, '../../../..', 'public.pem');
+const privateKeyPath = path.join(__dirname, '../../../..', 'private.pem');
+const PUBLIC_KEY = readFileSync(publicKeyPath, 'utf8');
+const PRIVATE_KEY = readFileSync(privateKeyPath, 'utf8');
 
 export class UserEntity {
   constructor(
