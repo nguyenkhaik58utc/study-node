@@ -37,7 +37,7 @@ import type { Response } from 'express';
 import { join } from 'path';
 import { createWriteStream } from 'fs';
 import { AuthGuard } from '@nestjs/passport';
-@Controller('products')
+@Controller('api/products')
 @UseGuards(AuthGuard('jwt'))
 @ApiBearerAuth('access-token')
 @UseGuards(TimeGuard)

@@ -6,7 +6,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { TimeGuard } from 'src/common/guards/product.guards';
 import { LoggingInterceptor } from 'src/common/interceptors/product.interceptors';
 import { HttpExceptionFilter } from 'src/common/filters/http-exception.filter';
-@Controller('users')
+@Controller('api/users')
 @UseGuards(AuthGuard('jwt'))
 @ApiBearerAuth('access-token')
 @UseGuards(TimeGuard)
