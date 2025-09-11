@@ -1,4 +1,5 @@
 {
+  "buildCommand": "npm run migrate:deploy && npm run build",
   "version": 2,
   "builds": [
     {
